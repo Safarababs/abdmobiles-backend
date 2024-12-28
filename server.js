@@ -19,8 +19,8 @@ mongoose
   .catch((error) => console.error("Error connecting to MongoDB:", error));
 
 // Routes
-app.use("/api/items", itemRoutes); // Changed the route prefix to "/api/items"
-app.use("/api/sales", saleRoutes); // Changed the route prefix to "/api/sales"
+app.use("/api/items", itemRoutes); // Item routes should start with /api/items
+app.use("/api", saleRoutes); // Sale routes should start with /api/sales
 
 // Start the server
 const PORT = process.env.PORT || 5000;

@@ -1,37 +1,42 @@
 const Sale = require("../models/Sale");
+const Item = require("../models/Item");
 
 const createSale = async (req, res) => {
   try {
-    const {
-      items,
-      totalAmount,
-      discount,
-      finalAmount,
-      customerName,
-      customerPhone,
-    } = req.body;
+    const { customerName, customerPhone, itemsSold, total } = req.body;
 
-    if (!items || !totalAmount || !finalAmount) {
+    if (!itemsSold || !total) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // Validate items
-    for (const item of items) {
-      if (!item.itemCode || !item.itemName || !item.price) {
-        return res
-          .status(400)
-          .json({ message: "Item is missing required fields" });
+    let totalProfit = 0;
+    const updatedItems = [];
+
+    for (const soldItem of itemsSold) {
+      const item = await Item.findById(soldItem._id);
+
+      if (item) {
+        const profit =
+          (soldItem.salePrice - item.purchasePrice) * soldItem.quantity;
+        totalProfit += profit;
+
+        // Update the stock in the database
+        item.quantity -= soldItem.quantity;
+        await item.save();
+
+        updatedItems.push({
+          ...soldItem,
+          profit,
+        });
       }
     }
 
-    // Create new sale
     const sale = new Sale({
-      items,
-      totalAmount,
-      discount,
-      finalAmount,
       customerName,
       customerPhone,
+      itemsSold: updatedItems,
+      total,
+      profit: totalProfit,
     });
 
     await sale.save();

@@ -4,15 +4,10 @@ const Item = require("./models/Item");
 const data = require("./data");
 
 dotenv.config();
-const MONGO_URI = process.env.MONGO_URI;
 
 mongoose
   .connect(
-    "mongodb+srv://safar-admin:sn5125a1@mflix.zags8.mongodb.net/abdmobiles?retryWrites=true&w=majority",
-    {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    }
+    "mongodb+srv://safar-admin:sn5125a1@mflix.zags8.mongodb.net/abdmobiles?retryWrites=true&w=majority"
   )
   .then(() => console.log("Database connected"))
   .catch((err) => console.log("Database connection error:", err));

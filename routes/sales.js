@@ -1,49 +1,79 @@
-// routes/sales.js
 const express = require("express");
-const Sale = require("../models/Sale"); // Assuming your Sale model is in models/Sale.js
-const Item = require("../models/Item"); // Assuming your Item model is in models/Item.js
 const router = express.Router();
+const Sale = require("../models/Sale");
+const moment = require("moment");
 
-// Example route for saving a sale
-router.post("/", async (req, res) => {
-  const { customerName, customerPhone, itemsSold, total } = req.body;
-
-  // Check if the itemsSold array is valid
-  if (!Array.isArray(itemsSold) || itemsSold.length === 0) {
-    return res
-      .status(400)
-      .json({ message: "Items sold should be a non-empty array." });
-  }
-
+// Fetch sales by date range (daily, weekly, monthly, yearly)
+router.get("/sales", async (req, res) => {
   try {
-    // Save the sale in the Sale collection
-    const sale = new Sale({
-      customerName,
-      customerPhone,
-      itemsSold, // Store the itemsSold data directly
-      total, // Store the total price
-      date: new Date(),
-    });
+    const { period } = req.query; // e.g., daily, weekly, monthly, yearly
 
-    // Save the sale record
-    await sale.save();
+    let startDate;
+    let endDate = moment(); // current date
 
-    // Update the quantities of items in the Item collection
-    for (const item of itemsSold) {
-      const itemDoc = await Item.findOne({ code: item.code });
-
-      // If the item exists, update its quantity
-      if (itemDoc) {
-        itemDoc.quantity -= item.quantity; // Decrease the quantity
-        await itemDoc.save();
-      }
+    switch (period) {
+      case "daily":
+        startDate = moment().startOf("day");
+        break;
+      case "weekly":
+        startDate = moment().startOf("week");
+        break;
+      case "monthly":
+        startDate = moment().startOf("month");
+        break;
+      case "yearly":
+        startDate = moment().startOf("year");
+        break;
+      default:
+        return res.status(400).json({ message: "Invalid period" });
     }
 
-    // Send back the saved sale data
-    res.status(201).json(sale);
+    const sales = await Sale.find({
+      date: { $gte: startDate.toDate(), $lte: endDate.toDate() },
+    });
+
+    res.status(200).json(sales);
+  } catch (error) {
+    console.error("Error fetching sales:", error);
+    res.status(500).json({ message: "Failed to fetch sales" });
+  }
+});
+
+router.post("/sales", async (req, res) => {
+  try {
+    const { customerName, customerPhone, itemsSold, total } = req.body;
+
+    // Generate a unique invoice number (timestamp + random number)
+    const invoiceNumber = `INV-${Date.now()}-${Math.floor(
+      Math.random() * 1000
+    )}`;
+
+    // Calculate total profit
+    const totalProfit = itemsSold.reduce((acc, item) => {
+      const profit = (item.salePrice - item.purchasePrice) * item.quantity;
+      item.profit = profit; // Add profit for each item
+      return acc + profit;
+    }, 0);
+
+    // Create the sale record
+    const sale = new Sale({
+      invoiceNumber,
+      customerName,
+      customerPhone,
+      itemsSold,
+      total,
+      totalProfit,
+      date: moment().toDate(),
+    });
+
+    await sale.save();
+
+    res
+      .status(201)
+      .json({ message: "Sale recorded successfully", invoiceNumber });
   } catch (error) {
     console.error("Error saving sale:", error);
-    res.status(500).json({ message: "Error saving sale" });
+    res.status(500).json({ message: "Failed to record sale" });
   }
 });
 
