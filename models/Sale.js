@@ -2,8 +2,8 @@ const mongoose = require("mongoose");
 
 // Define the sale schema
 const saleSchema = new mongoose.Schema({
-  customerName: { type: String, required: true },
-  customerPhone: { type: String, required: true },
+  customerName: { type: String, default: "Abdullah mobiles customer" },
+  customerPhone: { type: String, default: "03046348069" },
   itemsSold: [
     {
       _id: { type: mongoose.Schema.Types.ObjectId, required: true },
