@@ -21,5 +21,37 @@ router.get("/", async (req, res) => {
     res.status(500).json({ message: "Error fetching items" });
   }
 });
+router.put("/updateQuantity", async (req, res) => {
+  const { itemCode, quantityPurchased } = req.body;
+
+  // Ensure that both itemCode and quantityPurchased are provided
+  if (!itemCode || quantityPurchased === undefined) {
+    return res
+      .status(400)
+      .json({ message: "Item code and quantity are required" });
+  }
+
+  try {
+    // Find the item by its unique code
+    const item = await Item.findOne({ code: itemCode });
+
+    if (!item) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+
+    // Increase the quantity of the item
+    item.quantity += parseInt(quantityPurchased); // Ensure quantity is updated correctly
+
+    // Save the updated item back to the database
+    await item.save();
+
+    return res
+      .status(200)
+      .json({ message: "Item quantity updated successfully", item });
+  } catch (error) {
+    console.error("Error updating quantity:", error);
+    return res.status(500).json({ message: "Error updating quantity" });
+  }
+});
 
 module.exports = router;
