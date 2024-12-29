@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Sale = require("../models/Sale");
+const Item = require("../models/Item");
 const moment = require("moment");
 
 // Fetch sales by date range (daily, weekly, monthly, yearly)
@@ -28,9 +29,15 @@ router.get("/sales", async (req, res) => {
         return res.status(400).json({ message: "Invalid period" });
     }
 
+    console.log("Start Date: ", startDate.toDate());
+    console.log("End Date: ", endDate.toDate());
+
+    // Fetch sales within the date range
     const sales = await Sale.find({
       date: { $gte: startDate.toDate(), $lte: endDate.toDate() },
     });
+
+    console.log("Sales fetched: ", sales);
 
     res.status(200).json(sales);
   } catch (error) {
@@ -39,41 +46,71 @@ router.get("/sales", async (req, res) => {
   }
 });
 
+// POST /sales route - Saving the sale and updating inventory
 router.post("/sales", async (req, res) => {
   try {
     const { customerName, customerPhone, itemsSold, total } = req.body;
 
-    // Generate a unique invoice number (timestamp + random number)
-    const invoiceNumber = `INV-${Date.now()}-${Math.floor(
-      Math.random() * 1000
-    )}`;
+    let totalProfit = 0;
+    let totalLoss = 0;
 
-    // Calculate total profit
-    const totalProfit = itemsSold.reduce((acc, item) => {
-      const profit = (item.salePrice - item.purchasePrice) * item.quantity;
-      item.profit = profit; // Add profit for each item
-      return acc + profit;
-    }, 0);
+    const itemsWithProfitLoss = itemsSold.map((item) => {
+      const profitOrLoss =
+        (item.salePrice - item.purchasePrice) * item.quantity;
 
-    // Create the sale record
-    const sale = new Sale({
-      invoiceNumber,
-      customerName,
-      customerPhone,
-      itemsSold,
-      total,
-      totalProfit,
-      date: moment().toDate(),
+      if (profitOrLoss > 0) {
+        totalProfit += profitOrLoss;
+        item.profit = profitOrLoss; // Save profit
+        item.loss = undefined; // Ensure no loss is saved
+      } else if (profitOrLoss < 0) {
+        totalLoss += Math.abs(profitOrLoss);
+        item.loss = Math.abs(profitOrLoss); // Save loss
+        item.profit = undefined; // Ensure no profit is saved
+      }
+
+      return item;
     });
 
-    await sale.save();
+    // Generate invoice number before creating the sale
+    const invoiceNumber = `INV-${Date.now()}`; // Generate unique invoice number using timestamp
 
-    res
-      .status(201)
-      .json({ message: "Sale recorded successfully", invoiceNumber });
+    // Create the sale in the database
+    const newSale = new Sale({
+      customerName,
+      customerPhone,
+      itemsSold: itemsWithProfitLoss,
+      total,
+      profit: totalProfit > 0 ? totalProfit : undefined,
+      loss: totalLoss > 0 ? totalLoss : undefined,
+      invoiceNumber, // Set the invoice number here
+      date: moment().toDate(), // Set the date field
+    });
+
+    // Save the sale to the database
+    const savedSale = await newSale.save();
+
+    // Update inventory for each item sold
+    for (const item of itemsSold) {
+      const itemInDatabase = await Item.findById(item._id);
+
+      if (itemInDatabase && itemInDatabase.quantity >= item.quantity) {
+        itemInDatabase.quantity -= item.quantity;
+        await itemInDatabase.save();
+      } else {
+        console.error(`Insufficient stock for item: ${item.name}`);
+        return res.status(400).json({
+          message: `Insufficient stock for item: ${item.name}`,
+        });
+      }
+    }
+
+    res.status(201).json({
+      invoiceNumber: savedSale.invoiceNumber,
+      message: "Sale saved successfully!",
+    });
   } catch (error) {
     console.error("Error saving sale:", error);
-    res.status(500).json({ message: "Failed to record sale" });
+    res.status(500).json({ message: "Error saving sale" });
   }
 });
 
