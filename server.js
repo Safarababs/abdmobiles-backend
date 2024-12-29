@@ -12,6 +12,7 @@ app.use(
     origin: [
       "http://localhost:3000",
       "https://abdmobiles-backend.onrender.com",
+      "https://ssmobile.netlify.app",
     ], // Allow these origins
     methods: "GET,POST,PUT,DELETE", // Allow specific HTTP methods
     allowedHeaders: "Content-Type, Authorization", // Allow specific headers
