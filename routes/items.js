@@ -54,4 +54,40 @@ router.put("/updateQuantity", async (req, res) => {
   }
 });
 
+router.post("/", async (req, res) => {
+  const { code, name, purchasePrice, salePrice, quantity } = req.body;
+
+  try {
+    const newItem = new Item({
+      code,
+      name,
+      purchasePrice,
+      salePrice,
+      quantity,
+    });
+
+    await newItem.save(); // Save the new item to MongoDB
+    res.status(201).json({ message: "Item added successfully", newItem });
+  } catch (error) {
+    res.status(500).json({ message: "Error adding item", error });
+  }
+});
+
+router.delete("/:itemCode", async (req, res) => {
+  const { itemCode } = req.params; // Get item code from URL params
+
+  try {
+    // Find the item by its code and delete it
+    const result = await Item.deleteOne({ code: itemCode });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+
+    res.status(200).json({ message: "Item deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting item", error });
+  }
+});
+
 module.exports = router;
