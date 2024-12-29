@@ -29,15 +29,10 @@ router.get("/sales", async (req, res) => {
         return res.status(400).json({ message: "Invalid period" });
     }
 
-    console.log("Start Date: ", startDate.toDate());
-    console.log("End Date: ", endDate.toDate());
-
     // Fetch sales within the date range
     const sales = await Sale.find({
       date: { $gte: startDate.toDate(), $lte: endDate.toDate() },
     });
-
-    console.log("Sales fetched: ", sales);
 
     res.status(200).json(sales);
   } catch (error) {
