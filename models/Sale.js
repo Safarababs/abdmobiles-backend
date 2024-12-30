@@ -2,8 +2,6 @@ const mongoose = require("mongoose");
 
 // Define the sale schema
 const saleSchema = new mongoose.Schema({
-  customerName: { type: String, default: "Abdullah mobiles customer" },
-  customerPhone: { type: String, default: "03046348069" },
   itemsSold: [
     {
       _id: { type: mongoose.Schema.Types.ObjectId, required: true },
@@ -36,6 +34,13 @@ saleSchema.virtual("totalLoss").get(function () {
 // Method to update the profit and loss for each item before saving the sale
 // Method to generate a new invoice number (this can be customized as per your requirement)
 saleSchema.pre("save", function (next) {
+  // Ensure defaults for customerName and customerPhone
+  if (!this.customerName) {
+    this.customerName = "Abdullah mobiles";
+  }
+  if (!this.customerPhone) {
+    this.customerPhone = "03046348069";
+  }
   // Check if invoiceNumber exists. If not, generate a new one.
   if (!this.invoiceNumber) {
     // Generate a unique invoice number (you can customize this logic)
