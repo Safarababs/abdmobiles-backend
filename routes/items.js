@@ -21,7 +21,7 @@ router.get("/", async (req, res) => {
     res.status(500).json({ message: "Error fetching items" });
   }
 });
-router.put("/", async (req, res) => {
+router.put("/updateQuantity", async (req, res) => {
   const { itemCode, quantityPurchased } = req.body;
 
   // Ensure that both itemCode and quantityPurchased are provided
